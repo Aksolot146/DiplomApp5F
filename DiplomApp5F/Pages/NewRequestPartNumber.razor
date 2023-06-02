@@ -1,0 +1,141 @@
+﻿@page "/techpark/add/partnumber"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@using DiplomApp5F.Models
+@using DiplomApp5F.Services
+@using Microsoft.Extensions.Logging;
+@inject HttpClient Http
+@inject NavigationManager navigationManager
+@inject ILogger<NewRequest> Logger
+@inject AuthService authService
+
+@if (userProfile != null && userProfile.RankId == 1)
+{
+    <h3>Добавить новый серийный номер</h3>
+
+    <EditForm EditContext="@editContext" OnValidSubmit="@AddAction">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <h6>Тема заявки</h6>
+        @if (requestTitles != null)
+        {
+            <InputSelect id="Title" @bind-Value="title">
+                @foreach (var requestTitle in requestTitles)
+                        {
+                    <option value="@requestTitle.Id">@requestTitle.Titlename</option>
+                        }
+            </InputSelect>
+        }
+        <Button Name="Добавить тему" Width="250" OnClick="AddTitle"></Button>
+        <br />
+
+        <h6>Изготовитель</h6>
+        @*InputText id="Vendor" @bind-Value="addRequest.Vendor" placeholder="Vendor" />*@
+        @if (requestVendors != null)
+        {
+            <InputSelect id="Vendor" @bind-Value="vendor">
+                @foreach (var requestVendor in requestVendors)
+                        {
+                            if (requestVendor.TitleId == title || requestVendor.TitleId == 1)
+                            {<option value="@requestVendor.Id">@requestVendor.Vendorname</option>}
+                            }
+            </InputSelect>
+        }
+        <Button Name="Добавить изготовителя" Width="250" OnClick="AddVendor"></Button>
+        <br />
+
+        <h6>Модель</h6>
+        @*<InputText id="Model" @bind-Value="addRequest.Model" placeholder="Model" />*@
+        @if (requestModels != null)
+        {
+            <InputSelect id="Model" @bind-Value="addRequestPartNumber.ModelId">
+                @foreach (var requestModel in requestModels)
+                        {
+                            if (requestModel.VendorId == vendor || requestModel.VendorId == 1)
+                            {<option value="@requestModel.Id">@requestModel.Modelname</option>}
+                            }
+            </InputSelect>
+        }
+        <Button Name="Добавить модель" Width="250" OnClick="AddModel"></Button>
+        <br />
+
+        <InputText id="PartNumber" @bind-Value="addRequestPartNumber.PMname" placeholder="Серийный номер" />
+        <br />
+
+        <InputNumber id="Price" @bind-Value="addRequestPartNumber.Price" placeholder="Стоимость" />
+        <br />
+
+        <Button Type="submit" Name="Добавить" Width="100" />
+        <Button Type="button" Name="Отмена" Width="100" OnClick="Back" HasActive="true"></Button>
+    </EditForm>
+}
+else
+{
+    <p>Недостаточно прав для просмотра. Обратитесь к администратору системы.</p>
+}
+
+@code {
+    private EditContext editContext;
+    private RequestPartNumber addRequestPartNumber;
+    private IEnumerable<RequestTitle> requestTitles;
+    private IEnumerable<RequestVendor> requestVendors;
+    private IEnumerable<RequestModel> requestModels;
+    private int title;
+    private int vendor;
+
+    private CurrentUser currentUser;
+    private UserProfile userProfile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await authService.GetCurrentUserAsync();
+        userProfile = new UserProfile();
+        if (currentUser.Id > 0)
+            userProfile = await Http.GetFromJsonAsync<UserProfile>($"https://localhost:44395/api/userprofiles/{currentUser.ProfileId}");
+
+        addRequestPartNumber = new RequestPartNumber();
+        editContext = new(addRequestPartNumber);
+        requestTitles = await Http.GetFromJsonAsync<IEnumerable<RequestTitle>>("https://localhost:44395/api/requesttitles");
+        requestVendors = await Http.GetFromJsonAsync<IEnumerable<RequestVendor>>("https://localhost:44395/api/requestvendors");
+        requestModels = await Http.GetFromJsonAsync<IEnumerable<RequestModel>>("https://localhost:44395/api/requestmodels");
+    }
+
+    private async Task AddRequestPartNumber()
+    {
+        //if (title < 2 || vendor < 2 || addRequestPartNumber.ModelId < 2)
+        //Back();
+        //else
+        await Http.PostAsJsonAsync("https://localhost:44395/api/requestpartnumbers", addRequestPartNumber);
+    }
+
+    private void Back()
+    {
+        navigationManager.NavigateTo("https://localhost:44351/techpark");
+    }
+
+    private async Task AddAction()
+    {
+        if (editContext != null && editContext.Validate())
+        {
+            await AddRequestPartNumber();
+            Back();
+        }
+    }
+
+    private void AddTitle()
+    {
+        navigationManager.NavigateTo("https://localhost:44351/techpark/add/title");
+    }
+
+    private void AddVendor()
+    {
+        navigationManager.NavigateTo("https://localhost:44351/techpark/add/vendor");
+    }
+
+    private void AddModel()
+    {
+        navigationManager.NavigateTo("https://localhost:44351/techpark/add/model");
+    }
+}

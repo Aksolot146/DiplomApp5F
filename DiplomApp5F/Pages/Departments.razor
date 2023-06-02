@@ -1,0 +1,104 @@
+﻿@page "/department"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@using DiplomApp5F.Models
+@using DiplomApp5F.Services
+@inject HttpClient Http
+@inject NavigationManager navigationManager
+@inject AuthService authService
+
+@if (userProfile != null && userProfile.RankId == 1)
+{
+    <h3>Отделы</h3>
+    <p>Нажмите на заголовки столбцов таблицы для сортировки</p>
+
+    <Button Name="Добавить" Width="100" OnClick="Add"></Button>
+
+    @if (departments == null)
+    {
+        <p>Нет отделов.</p>
+    }
+    else
+    {
+        <table>
+            <tr>
+                <td>№</td>
+                <td>Отдел</td>
+                <td>Сведения об отделе</td>
+                <td>Уд.</td>
+                <td>Ред.</td>
+            </tr>
+            @foreach (var department in departments)
+            {
+                <tr>
+                    <td @onclick="SortID">@department.Id</td>
+                    <td @onclick="SortDeptname">@department.Deptname</td>
+                    <td @onclick="SortDescription">@department.Description</td>
+                    <td><a href="@($"https://localhost:44351/department/delete/{department.Id}")"><h2>🗑</h2></a></td>
+                    <td><a href="@($"https://localhost:44351/department/edit/{department.Id}")"><h2>✎</h2></a></td>
+                </tr>
+            }
+        </table>
+    }
+}
+else
+{
+    <p>Недостаточно прав для просмотра. Обратитесь к администратору системы.</p>
+}
+
+@code {
+    private Department[] departments;
+
+    private CurrentUser currentUser;
+    private UserProfile userProfile;
+
+    private bool sortId;
+    private bool sortDeptname;
+    private bool sortDescription;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await authService.GetCurrentUserAsync();
+        userProfile = new UserProfile();
+        if (currentUser.Id > 0)
+            userProfile = await Http.GetFromJsonAsync<UserProfile>($"https://localhost:44395/api/userprofiles/{currentUser.ProfileId}");
+
+        departments = await Http.GetFromJsonAsync<Department[]>("https://localhost:44395/api/departments");
+    }
+
+    private void Add()
+    {
+        navigationManager.NavigateTo("https://localhost:44351/department/add");
+    }
+
+    private void SortDescription()
+    {
+        if (sortDescription)
+            departments = departments.OrderByDescending(x => x.Description).ToArray();
+        else
+            departments = departments.OrderBy(x => x.Description).ToArray();
+
+        sortDescription = !sortDescription;
+    }
+
+    private void SortID()
+    {
+        if (sortId)
+            departments = departments.OrderByDescending(x => x.Id).ToArray();
+        else
+            departments = departments.OrderBy(x => x.Id).ToArray();
+
+        sortId = !sortId;
+    }
+
+    private void SortDeptname()
+    {
+        if (sortDeptname)
+            departments = departments.OrderByDescending(x => x.Deptname).ToArray();
+        else
+            departments = departments.OrderBy(x => x.Deptname).ToArray();
+
+        sortDeptname = !sortDeptname;
+    }
+}

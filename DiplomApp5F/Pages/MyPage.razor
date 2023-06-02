@@ -1,0 +1,52 @@
+﻿@page "/me"
+@using System.Net.Http
+@using System.Threading.Tasks
+@using DiplomApp5F.Models
+@using DiplomApp5F.Services
+@inject HttpClient Http
+@inject NavigationManager navigationManager
+@inject AuthService authService
+
+<h3>Личный кабинет</h3>
+@if (userProfile != null && userProfile.Id > 0)
+{
+    <p>Имя: @userProfile.Nickname</p>
+    foreach (var userRank in userRanks)
+    {
+        if (userRank.Id == userProfile.RankId)
+        {
+            <p>Ранг: @userRank.Rankname</p>
+            break;
+        }
+    }
+    foreach (var department in departments)
+    {
+        if (department.Id == userProfile.DeptId)
+        {
+            <p>Отдел: @department.Deptname</p>
+            break;
+        }
+    }
+}
+else 
+{
+    <p>Для доступа в свой личный кабинет, зарегистрируйтесь или войдите в систему</p>
+}
+
+@code {
+    private CurrentUser currentUser;
+    private UserProfile userProfile;
+    private IEnumerable<Department> departments;
+    private IEnumerable<UserRank> userRanks;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await authService.GetCurrentUserAsync();
+        userProfile = new UserProfile();
+        if (currentUser.Id > 0)
+            userProfile = await Http.GetFromJsonAsync<UserProfile>($"https://localhost:44395/api/userprofiles/{currentUser.ProfileId}");
+        departments = await Http.GetFromJsonAsync<IEnumerable<Department>>($"https://localhost:44395/api/departments");
+        userRanks = await Http.GetFromJsonAsync<IEnumerable<UserRank>>($"https://localhost:44395/api/userranks");
+        Console.WriteLine($"userProfile.Id: {userProfile.Id}");
+    }
+}

@@ -1,0 +1,327 @@
+﻿@page "/techpark/report/table/{time}"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@using DiplomApp5F.Models
+@using DiplomApp5F.Services
+@inject HttpClient Http
+@inject NavigationManager navigationManager
+@inject AuthService authService
+
+@if (userProfile != null && userProfile.RankId == 1)
+{
+    <h3>Статистика заявок и парка IT-техники с @time2.ToShortDateString()</h3>
+    @if (requestStats == null || requestTitles == null || requestVendors == null || requestModels == null || requestPartNumbers == null)
+    {
+        <div>Loading</div>
+    }
+    else
+    {
+        @foreach (var requestStat2 in requestStats)
+        {
+            titleCountFirst = requestStat2.Id;
+            break;
+        }
+        <table>
+            <tr>
+                <td colspan="3">Статистика заявок</td>
+            </tr>
+            @foreach (var requestStat2 in requestStats)
+            {
+                titleCount = requestStat2.Id - titleCountFirst + 1;
+                if (titleCount == 1)
+                {
+                    <tr>
+                        <td colspan="3">Все темы</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">Актуальных заявок</td>
+                        <td>@requestStat2.ActualRequestsCount</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">Неактуальных заявок</td>
+                        <td>@requestStat2.NonActualRequestsCount</td>
+                    </tr>
+                    <tr>
+                        <td> </td>
+                        <td>Доля выполненных заявок</td>
+                        <td>@requestStat2.CompleteRequests %</td>
+                    </tr>
+                    <tr>
+                        <td> </td>
+                        <td>Доля отклонённых заявок</td>
+                        <td>@requestStat2.DeclinedRequests %</td>
+                    </tr>
+                    <tr>
+                        <td> </td>
+                        <td>Доля просроченных заявок</td>
+                        <td>@requestStat2.ExpiredRequests %</td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var requestTitle in requestTitles)
+                    {
+                        if (requestTitle.Id == titleCount)
+                        {
+                            <tr>
+                                <td colspan="3">@requestTitle.Titlename</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2">Актуальных заявок</td>
+                                <td>@requestStat2.ActualRequestsCount</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2">Неактуальных заявок</td>
+                                <td>@requestStat2.NonActualRequestsCount</td>
+                            </tr>
+                            <tr>
+                                <td> </td>
+                                <td>Доля выполненных заявок</td>
+                                <td>@requestStat2.CompleteRequests %</td>
+                            </tr>
+                            <tr>
+                                <td> </td>
+                                <td>Доля отклонённых заявок</td>
+                                <td>@requestStat2.DeclinedRequests %</td>
+                            </tr>
+                            <tr>
+                                <td> </td>
+                                <td>Доля просроченных заявок</td>
+                                <td>@requestStat2.ExpiredRequests %</td>
+                            </tr>
+                            break;
+                        }
+                    }
+                }
+                titleCount += 1;
+            }
+        </table>
+        <table>
+            <tr>
+                <td colspan="5">Статистика парка IT-техники</td>
+            </tr>
+            @foreach (var requestTitle in requestTitles)
+            {
+                @if (requestTitle.Id == 1)
+                {
+                    <tr>
+                        <td colspan="5">Все темы</td>
+                    </tr>
+                    <tr>
+                        <td>Фирма</td>
+                        <td>Модель</td>
+                        <td>Серийный номер</td>
+                        <td>Дата регистрации</td>
+                        <td>Стоимость</td>
+                    </tr>
+                    @foreach (var requestTitle2 in requestTitles)
+                    {
+                        @foreach (var requestVendor in requestVendors)
+                        {
+                            @foreach (var requestModel in requestModels)
+                            {
+                                @foreach (var requestPartNumber in requestPartNumbers)
+                                {
+                                    <tr>
+                                        @if (time2 <= requestPartNumber.RegDate
+                                      && requestTitle2.Id != 1
+                                      && requestVendor.TitleId == requestTitle2.Id
+                                      && requestModel.VendorId == requestVendor.Id
+                                      && requestPartNumber.ModelId == requestModel.Id)
+                                        {
+                                            <td>@requestVendor.Vendorname</td>
+                                            <td>@requestModel.Modelname</td>
+                                            <td>@requestPartNumber.PMname</td>
+                                            <td>@requestPartNumber.RegDate</td>
+                                            <td>@requestPartNumber.Price</td>
+                                            //Sum(totalPrice, totalPrice, requestPartNumber.Price);
+                                            totalPrice += requestPartNumber.Price;
+                                        }
+                                    </tr>
+                                }
+                            }
+                        }
+                    }
+                    <tr>
+                        <td colspan="3"> </td>
+                        <td>Общая стоимость</td>
+                        <td>@totalPrice</td>
+                    </tr>
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5">@requestTitle.Titlename</td>
+                    </tr>
+                    <tr>
+                        <td>Фирма</td>
+                        <td>Модель</td>
+                        <td>Серийный номер</td>
+                        <td>Дата регистрации</td>
+                        <td>Стоимость</td>
+                    </tr>
+                    @foreach (var requestVendor in requestVendors)
+                    {
+                        @foreach (var requestModel in requestModels)
+                        {
+                            @foreach (var requestPartNumber in requestPartNumbers)
+                            {
+                                <tr>
+                                    @if (time2 <= requestPartNumber.RegDate
+                                  && requestVendor.TitleId == requestTitle.Id
+                                  && requestModel.VendorId == requestVendor.Id
+                                  && requestPartNumber.ModelId == requestModel.Id)
+                                    {
+                                        <td>@requestVendor.Vendorname</td>
+                                        <td>@requestModel.Modelname</td>
+                                        <td>@requestPartNumber.PMname</td>
+                                        <td>@requestPartNumber.RegDate</td>
+                                        <td>@requestPartNumber.Price</td>
+                                        //Sum(totalPrice, totalPrice, requestPartNumber.Price);
+                                        totalPrice += requestPartNumber.Price;
+                                    }
+                                </tr>
+                            }
+                        }
+                    }
+                    <tr>
+                        <td colspan="3"> </td>
+                        <td>Общая стоимость</td>
+                        <td>@totalPrice</td>
+                    </tr>
+                }
+                totalPrice = 0;
+            }
+        </table>
+    }
+}
+else
+{
+    <p>Недостаточно прав для просмотра. Обратитесь к администратору системы.</p>
+}
+
+@code {
+    [Parameter]
+    public string time { get; set; }
+
+    private CurrentUser currentUser;
+    private UserProfile userProfile;
+
+    private int titleCount;
+    private int titleCountFirst;
+    private int totalPrice;
+
+    private DateTime time2;
+    private RequestStat requestStat = new RequestStat();
+    private IEnumerable<RequestStat> requestStats;
+    private IEnumerable<Request> requests;
+    private IEnumerable<RequestTitle> requestTitles;
+    private IEnumerable<RequestVendor> requestVendors;
+    private IEnumerable<RequestModel> requestModels;
+    private IEnumerable<RequestPartNumber> requestPartNumbers;
+
+    protected override async Task OnInitializedAsync()
+    {
+        time2 = DateTime.ParseExact(time, "ddMMyyyy", null);
+        currentUser = await authService.GetCurrentUserAsync();
+        userProfile = new UserProfile();
+        if (currentUser.Id > 0)
+            userProfile = await Http.GetFromJsonAsync<UserProfile>($"https://localhost:44395/api/userprofiles/{currentUser.ProfileId}");
+
+        requestStats = await Http.GetFromJsonAsync<IEnumerable<RequestStat>>("https://localhost:44395/api/requeststats");
+        requests = await Http.GetFromJsonAsync<IEnumerable<Request>>("https://localhost:44395/api/requests");
+        requestTitles = await Http.GetFromJsonAsync<IEnumerable<RequestTitle>>("https://localhost:44395/api/requesttitles");
+        requestVendors = await Http.GetFromJsonAsync<IEnumerable<RequestVendor>>("https://localhost:44395/api/requestvendors");
+        requestModels = await Http.GetFromJsonAsync<IEnumerable<RequestModel>>("https://localhost:44395/api/requestmodels");
+        requestPartNumbers = await Http.GetFromJsonAsync<IEnumerable<RequestPartNumber>>("https://localhost:44395/api/requestpartnumbers");
+
+        //if (requestStats.Count<RequestStat>() != 0)
+        //{
+        //    await Http.DeleteAsync("https://localhost:44395/api/requeststats");
+        //}
+
+        ////все заявки
+        //requestStat.ActualRequestsCount = 0;
+        //requestStat.NonActualRequestsCount = 0;
+        //requestStat.CompleteRequests = 0;
+        //requestStat.DeclinedRequests = 0;
+        //requestStat.ExpiredRequests = 0;
+        //foreach (var request in requests)
+        //{
+        //    if (request.StatusId == 1)
+        //    {
+        //        requestStat.ActualRequestsCount += 1;
+        //    }
+        //    else
+        //    {
+        //        requestStat.NonActualRequestsCount += 1;
+        //        if (request.StatusId == 2) requestStat.CompleteRequests += 1;
+        //        if (request.StatusId == 3) requestStat.DeclinedRequests += 1;
+        //        if (request.StatusId == 4) requestStat.ExpiredRequests += 1;
+        //    }
+        //}
+        //if (requestStat.NonActualRequestsCount == 0)
+        //{
+        //    requestStat.CompleteRequests = 100 * requestStat.CompleteRequests / (requestStat.NonActualRequestsCount + 1);
+        //    requestStat.DeclinedRequests = 100 * requestStat.DeclinedRequests / (requestStat.NonActualRequestsCount + 1);
+        //    requestStat.ExpiredRequests = 100 * requestStat.ExpiredRequests / (requestStat.NonActualRequestsCount + 1);
+        //}
+        //else
+        //{
+        //    requestStat.CompleteRequests = 100 * requestStat.CompleteRequests / (requestStat.NonActualRequestsCount);
+        //    requestStat.DeclinedRequests = 100 * requestStat.DeclinedRequests / (requestStat.NonActualRequestsCount);
+        //    requestStat.ExpiredRequests = 100 * requestStat.ExpiredRequests / (requestStat.NonActualRequestsCount);
+        //}
+        //await Http.PostAsJsonAsync<RequestStat>("https://localhost:44395/api/requeststats", requestStat);
+
+        ////заявки по темам
+        //foreach (var requestTitle in requestTitles)
+        //{
+        //    requestStat.ActualRequestsCount = 0;
+        //    requestStat.NonActualRequestsCount = 0;
+        //    requestStat.CompleteRequests = 0;
+        //    requestStat.DeclinedRequests = 0;
+        //    requestStat.ExpiredRequests = 0;
+        //    if (requestTitle.Id != 1)
+        //    {
+        //        foreach (var request in requests)
+        //        {
+        //            if (request.Title == requestTitle.Titlename)
+        //            {
+        //                if (request.StatusId == 1)
+        //                {
+        //                    requestStat.ActualRequestsCount += 1;
+        //                }
+        //                else
+        //                {
+        //                    requestStat.NonActualRequestsCount += 1;
+        //                    if (request.StatusId == 2) requestStat.CompleteRequests += 1;
+        //                    if (request.StatusId == 3) requestStat.DeclinedRequests += 1;
+        //                    if (request.StatusId == 4) requestStat.ExpiredRequests += 1;
+        //                }
+        //            }
+        //        }
+        //        if (requestStat.NonActualRequestsCount == 0)
+        //        {
+        //            requestStat.CompleteRequests = 100 * requestStat.CompleteRequests / (requestStat.NonActualRequestsCount + 1);
+        //            requestStat.DeclinedRequests = 100 * requestStat.DeclinedRequests / (requestStat.NonActualRequestsCount + 1);
+        //            requestStat.ExpiredRequests = 100 * requestStat.ExpiredRequests / (requestStat.NonActualRequestsCount + 1);
+        //        }
+        //        else
+        //        {
+        //            requestStat.CompleteRequests = 100 * requestStat.CompleteRequests / (requestStat.NonActualRequestsCount);
+        //            requestStat.DeclinedRequests = 100 * requestStat.DeclinedRequests / (requestStat.NonActualRequestsCount);
+        //            requestStat.ExpiredRequests = 100 * requestStat.ExpiredRequests / (requestStat.NonActualRequestsCount);
+        //        }
+        //        await Http.PostAsJsonAsync<RequestStat>("https://localhost:44395/api/requeststats", requestStat);
+        //    }
+        //}
+    }
+
+    private int Sum(int x, int a, int b)
+    {
+        x = a + b;
+        return x;
+    }
+}

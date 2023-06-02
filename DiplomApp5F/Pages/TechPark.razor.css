@@ -1,0 +1,101 @@
+﻿a {
+    color: #000000;
+}
+
+.test {
+    width: 100px;
+    height: 100px;
+    background: aqua;
+}
+
+tr:nth-child(odd) {
+    background-color: #ffffff;
+    color: #000000;
+    text-align: left;
+    text-anchor: start;
+}
+
+tr:nth-child(even) {
+    background-color: #eeeeee;
+    color: #3c6686;
+    text-align: left;
+    text-anchor: start;
+}
+
+tr:first-child {
+    background-color: #3c6686;
+    color: #ffffff;
+    text-align: center;
+    font-weight: 800;
+}
+
+td {
+    padding: 7px 30px;
+    border: 1px solid #cccccc;
+}
+
+    td.total {
+        background-color: #FFD4A9;
+    }
+
+    td.right {
+        text-align: left;
+    }
+
+    td.right {
+        margin-right: 1px;
+    }
+
+    td.left {
+        margin-left: 1px;
+    }
+
+    td:nth-child(1) {
+        background-color: #ffd300;
+        color: #000000;
+        text-align: center;
+        font-weight: 700;
+    }
+
+tabs {
+    width: 100%;
+    padding: 0px;
+    margin: 0 auto;
+}
+
+    .tabs > input [type="radio"] {
+        display: none;
+    }
+
+    .tabs > div {
+        display: none;
+        padding: 12px;
+        border: 1px solid #C0C0C0;
+        background: #FFFFFF;
+    }
+
+    .tabs > label {
+        display: inline-block;
+        padding: 7px;
+        margin: 0 -5px -1px 0;
+        text-align: center;
+        color: #666666;
+        border: 1px solid #C0C0C0;
+        background: #E0E0E0;
+        cursor: pointer;
+    }
+
+    .tabs > input[type="radio"]:checked + label {
+        color: #000000;
+        border: 1px solid #C0C0C0;
+        border-bottom: 1px solid #FFFFFF;
+        background: #FFFFFF;
+    }
+
+    #Full:checked ~ #Full,
+    #Title:checked ~ #Title,
+    #Vendor:checked ~ #Vendor,
+    #Model:checked ~ #Model,
+    #PartNumber:checked ~ #PartNumber {
+        display: block;
+    }

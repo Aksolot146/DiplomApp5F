@@ -1,0 +1,178 @@
+﻿@page "/login"
+@using System.Net.Http
+@using System.Threading.Tasks
+@using DiplomApp5F.Models
+@using DiplomApp5F.Services
+@inject HttpClient Http
+@inject NavigationManager navigationManager
+@inject AuthService authService
+
+<h3>Войти в учётную запись</h3>
+
+<div>@message</div>
+
+<EditForm EditContext="@editContext" OnValidSubmit="@LoginAction">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <InputText id="Login" @bind-Value="user.Login" placeholder="Логин" />
+    <br />
+    <InputText id="Password" @bind-Value="user.Password" placeholder="Пароль" />
+    <br />
+
+    <Button Type="button" Name="Зарегистрироваться" Width="200" OnClick="CreateUser" />
+    <Button Type="submit" Name="Войти" Width="100" />
+    <Button Type="button" Name="Выйти" Width="100" OnClick="LogOut"/>
+    <Button Type="button" Name="Отмена" Width="100" OnClick="Back" HasActive="true"></Button>
+</EditForm>
+
+@code {
+    private EditContext editContext;
+    private CurrentUser currentUser;
+    private User user;
+    private IEnumerable<UserProfile> userProfiles;
+    private IEnumerable<CurrentUser> currentUsers;
+    private string message;
+
+    private IEnumerable<Department> departments;
+    private Department department = new Department();
+
+    private IEnumerable<UserRank> userRanks;
+    private UserRank userRank = new UserRank();
+
+    private IEnumerable<RequestStatus> requestStatuses;
+    private RequestStatus requestStatus = new RequestStatus();
+
+    private IEnumerable<RequestTitle> requestTitles;
+    private RequestTitle requestTitle = new RequestTitle();
+
+    private IEnumerable<RequestVendor> requestVendors;
+    private RequestVendor requestVendor = new RequestVendor();
+
+    private IEnumerable<RequestModel> requestModels;
+    private RequestModel requestModel = new RequestModel();
+
+    private IEnumerable<RequestPartNumber> requestPartNumbers;
+    private RequestPartNumber requestPartNumber = new RequestPartNumber();
+
+    protected override void OnInitialized()
+    {
+        user = new User();
+        editContext = new(user);
+        //currentUsers = await Http.GetFromJsonAsync<IEnumerable<CurrentUser>>($"https://localhost:44395/api/currentuser");
+    }
+
+    private async Task LoginAction()
+    {
+        if (editContext != null && editContext.Validate())
+        {
+            await LoginUser();
+        }
+    }
+
+    private async Task LoginUser()
+    {
+        //Console.WriteLine($"currentUsers: {currentUsers.Count()}");
+        if (await authService.LogInAsync(user.Login, user.Password))
+        {
+            navigationManager.NavigateTo("https://localhost:44351/");
+        }
+        else
+            message = "Неверный логин/пароль или необходимо выйти из учётной записи";
+
+    }
+
+    private async Task LogOut()
+    {
+        await authService.LogOutAsync();
+        message = "Вы вышли из учётной записи";
+    }
+
+    private async Task CreateUser()
+    {
+        //var user = new User();
+        //user.Login = "newLogin";
+        //user.Mail = "???";
+        //user.Password = "1";
+
+        //var profile = new UserProfile();
+        //profile.Nickname = "Новый";
+        //profile.RankId = 3;
+        //profile.DeptId = 1;
+        //profile.Description = "новый пользователь";
+
+        //user.Profile = profile;
+
+        //await authService.CreateUserAsync(user);
+
+        departments = await Http.GetFromJsonAsync<IEnumerable<Department>>("https://localhost:44395/api/departments");
+        if (departments.Count<Department>() == 0)
+        {
+            department.Deptname = "Отдел 1";
+            await Http.PostAsJsonAsync<Department>("https://localhost:44395/api/departments", department);
+        }
+
+        userRanks = await Http.GetFromJsonAsync<IEnumerable<UserRank>>("https://localhost:44395/api/userranks");
+        if (userRanks.Count<UserRank>() == 0)
+        {
+            userRank.Rankname = "Администратор";
+            await Http.PostAsJsonAsync<UserRank>("https://localhost:44395/api/userranks", userRank);
+            userRank.Rankname = "Специалист";
+            await Http.PostAsJsonAsync<UserRank>("https://localhost:44395/api/userranks", userRank);
+            userRank.Rankname = "Пользователь";
+            await Http.PostAsJsonAsync<UserRank>("https://localhost:44395/api/userranks", userRank);
+        }
+
+        requestStatuses = await Http.GetFromJsonAsync<IEnumerable<RequestStatus>>("https://localhost:44395/api/requeststatuses");
+        if (requestStatuses.Count<RequestStatus>() == 0)
+        {
+            requestStatus.Statusname = "Актуально";
+            await Http.PostAsJsonAsync<RequestStatus>("https://localhost:44395/api/requeststatuses", requestStatus);
+            requestStatus.Statusname = "Выполнено";
+            await Http.PostAsJsonAsync<RequestStatus>("https://localhost:44395/api/requeststatuses", requestStatus);
+            requestStatus.Statusname = "Отклонено";
+            await Http.PostAsJsonAsync<RequestStatus>("https://localhost:44395/api/requeststatuses", requestStatus);
+            requestStatus.Statusname = "Просрочено";
+            await Http.PostAsJsonAsync<RequestStatus>("https://localhost:44395/api/requeststatuses", requestStatus);
+        }
+
+        requestTitles = await Http.GetFromJsonAsync<IEnumerable<RequestTitle>>("https://localhost:44395/api/requesttitles");
+        if (requestTitles.Count<RequestTitle>() == 0)
+        {
+            requestTitle.Titlename = "=ВЫБЕРИТЕ ТЕМУ=";
+            await Http.PostAsJsonAsync<RequestTitle>("https://localhost:44395/api/requesttitles", requestTitle);
+        }
+
+        requestVendors = await Http.GetFromJsonAsync<IEnumerable<RequestVendor>>("https://localhost:44395/api/requestvendors");
+        if (requestVendors.Count<RequestVendor>() == 0)
+        {
+            requestVendor.Vendorname = "=ВЫБЕРИТЕ ИЗГОТОВИТЕЛЯ=";
+            requestVendor.TitleId = 1;
+            await Http.PostAsJsonAsync<RequestVendor>("https://localhost:44395/api/requestvendors", requestVendor);
+        }
+
+        requestModels = await Http.GetFromJsonAsync<IEnumerable<RequestModel>>("https://localhost:44395/api/requestmodels");
+        if (requestModels.Count<RequestModel>() == 0)
+        {
+            requestModel.Modelname = "=ВЫБЕРИТЕ МОДЕЛЬ=";
+            requestModel.VendorId = 1;
+            await Http.PostAsJsonAsync<RequestModel>("https://localhost:44395/api/requestmodels", requestModel);
+        }
+
+        requestPartNumbers = await Http.GetFromJsonAsync<IEnumerable<RequestPartNumber>>("https://localhost:44395/api/requestpartnumbers");
+        if (requestPartNumbers.Count<RequestPartNumber>() == 0)
+        {
+            requestPartNumber.PMname = "=ВЫБЕРИТЕ СЕРИЙНЫЙ НОМЕР=";
+            requestPartNumber.ModelId = 1;
+            requestPartNumber.Price = 0;
+            await Http.PostAsJsonAsync<RequestPartNumber>("https://localhost:44395/api/requestpartnumbers", requestPartNumber);
+        }
+
+        navigationManager.NavigateTo("https://localhost:44351/signup");
+    }
+
+    private void Back()
+    {
+        navigationManager.NavigateTo("https://localhost:44351/");
+    }
+}

@@ -1,0 +1,99 @@
+﻿@page "/signup"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@using DiplomApp5F.Models
+@using Microsoft.Extensions.Logging;
+@inject HttpClient Http
+@inject NavigationManager navigationManager
+@inject ILogger<Registration> Logger
+
+<h3>Зарегистрироваться</h3>
+
+<EditForm EditContext="@editContext" OnValidSubmit="@AddAction">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <InputText id="Login" @bind-Value="addUser.Login" placeholder="Логин" />
+    <br />
+    <InputText id="Mail" @bind-Value="addUser.Mail" placeholder="Почта" />
+    <br />
+    <InputText id="Password" @bind-Value="addUser.Password" placeholder="Пароль" />
+    <br />
+</EditForm>
+
+<EditForm EditContext="@editContext2" OnValidSubmit="@AddAction">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <InputText id="Nickname" @bind-Value="addUserProfile.Nickname" placeholder="Ник" />
+    <br />
+
+    <h6>Выберите отдел:</h6>
+    @if (departments != null)
+    {
+        <InputSelect id="DeptId" @bind-Value="addUserProfile.DeptId">
+            @foreach (var department in departments)
+                {
+                <option value="@department.Id">@department.Deptname</option>
+                }
+        </InputSelect>
+    }
+    <br />
+
+    <InputText id="UserDescription" @bind-Value="addUserProfile.Description" placeholder="Доп.сведения" />
+    <br />
+
+    <Button Type="submit" Name="Зарегистрироваться" Width="200" />
+    <Button Type="button" Name="Отмена" Width="100" OnClick="Back" HasActive="true"></Button>
+</EditForm>
+
+@code {
+    private EditContext editContext;
+    private EditContext editContext2;
+    private User addUser = new User();
+    private UserProfile addUserProfile = new UserProfile();
+    private IEnumerable<Department> departments;
+    private IEnumerable<UserProfile> userProfiles;
+
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new(addUser);
+        editContext2 = new(addUserProfile);
+        departments = await Http.GetFromJsonAsync<IEnumerable<Department>>("https://localhost:44395/api/departments");
+        userProfiles = await Http.GetFromJsonAsync<IEnumerable<UserProfile>>("https://localhost:44395/api/userprofiles");
+    }
+
+    private async Task AddUser()
+    {
+        if (userProfiles.Count<UserProfile>() == 0)
+            addUserProfile.RankId = 1;
+        else
+            addUserProfile.RankId = 3;
+        addUser.Profile = addUserProfile;
+        await Http.PostAsJsonAsync("https://localhost:44395/api/users", addUser);
+        //uid.UId = addUser.Id;
+    }
+
+    /*private async Task AddProfile() {
+        userProfiles.Nickname = nick;
+        userProfiles.UserId = addUser.Id;
+        await Http.PostAsJsonAsync("https://localhost:44395/api/userprofiles", userProfiles);
+        UID.UId = userProfiles.RankId;
+    }*/
+
+    private void Back()
+    {
+        navigationManager.NavigateTo("https://localhost:44351/login");
+    }
+
+    private async Task AddAction()
+    {
+        if (editContext != null && editContext.Validate())
+        {
+            await AddUser();
+            //await AddProfile();
+            Back();
+        }
+    }
+}

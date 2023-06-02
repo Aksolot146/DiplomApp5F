@@ -1,0 +1,82 @@
+﻿@page "/techpark/delete/title/{id:int}"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@using DiplomApp5F.Models
+@using DiplomApp5F.Services
+@inject HttpClient Http
+@inject NavigationManager navigationManager
+@inject AuthService authService
+
+@if (userProfile != null && userProfile.RankId == 1)
+{
+    <h3>Удаление темы</h3>
+    <p>Продолжить? При удалении темы произойдёт удаление и всех единиц IT-техники, относящихся к этой теме</p>
+    <Button Name="Да" Width="100" OnClick="DeleteAction" HasActive="true"></Button>
+    <Button Name="Нет" Width="100" OnClick="Back" HasActive="true"></Button>
+}
+else
+{
+    <p>Недостаточно прав для просмотра. Обратитесь к администратору системы.</p>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private RequestTitle[] requestTitles;
+    private IEnumerable<RequestVendor> requestVendors;
+    private IEnumerable<RequestModel> requestModels;
+    private IEnumerable<RequestPartNumber> requestPartNumbers;
+
+    private CurrentUser currentUser;
+    private UserProfile userProfile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await authService.GetCurrentUserAsync();
+        userProfile = new UserProfile();
+        if (currentUser.Id > 0)
+            userProfile = await Http.GetFromJsonAsync<UserProfile>($"https://localhost:44395/api/userprofiles/{currentUser.ProfileId}");
+
+        requestTitles = await Http.GetFromJsonAsync<RequestTitle[]>("https://localhost:44395/api/requesttitles");
+        requestVendors = await Http.GetFromJsonAsync<RequestVendor[]>("https://localhost:44395/api/requestvendors");
+        requestModels = await Http.GetFromJsonAsync<RequestModel[]>("https://localhost:44395/api/requestmodels");
+        requestPartNumbers = await Http.GetFromJsonAsync<RequestPartNumber[]>("https://localhost:44395/api/requestpartnumbers");
+    }
+
+    private async Task RemoveTitle()
+    {
+        foreach (var requestVendor in requestVendors)
+        {
+            if (requestVendor.TitleId == Id)
+            {
+                foreach (var requestModel in requestModels)
+                {
+                    if (requestModel.VendorId == requestVendor.Id)
+                    {
+                        foreach (var requestPartNumber in requestPartNumbers)
+                        {
+                            if (requestPartNumber.ModelId == requestModel.Id)
+                                await Http.DeleteAsync($"https://localhost:44395/api/requestpartnumbers/{requestPartNumber.Id}");
+                        }
+                        await Http.DeleteAsync($"https://localhost:44395/api/requestmodels/{requestModel.Id}");
+                    }
+                }
+                await Http.DeleteAsync($"https://localhost:44395/api/requestvendors/{requestVendor.Id}");
+            }
+        }
+        await Http.DeleteAsync($"https://localhost:44395/api/requesttitles/{Id}");
+    }
+
+    private void Back()
+    {
+        navigationManager.NavigateTo($"https://localhost:44351/techpark");
+    }
+
+    private async Task DeleteAction()
+    {
+        await RemoveTitle();
+        Back();
+    }
+}

@@ -1,0 +1,76 @@
+﻿@page "/department/delete/{id:int}"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@using DiplomApp5F.Models
+@using DiplomApp5F.Services
+@inject HttpClient Http
+@inject NavigationManager navigationManager
+@inject AuthService authService
+
+@if (userProfile != null && userProfile.RankId == 1)
+{
+    <h3>Удаление отдела</h3>
+    <p>Продолжить (данные об отделе будут удалены)?</p>
+    @*@<input @bind="Id" />*@
+    <Button Name="Да" Width="100" OnClick="DeleteAction" HasActive="true"></Button>
+    <Button Name="Нет" Width="100" OnClick="Back" HasActive="true"></Button>
+}
+else
+{
+    <p>Недостаточно прав для просмотра. Обратитесь к администратору системы.</p>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private UserProfile[] userProfiles;
+    private Department[] departments;
+
+    private CurrentUser currentUser;
+    private UserProfile userProfile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await authService.GetCurrentUserAsync();
+        userProfile = new UserProfile();
+        if (currentUser.Id > 0)
+            userProfile = await Http.GetFromJsonAsync<UserProfile>($"https://localhost:44395/api/userprofiles/{currentUser.ProfileId}");
+
+        userProfiles = await Http.GetFromJsonAsync<UserProfile[]>("https://localhost:44395/api/userprofiles");
+        departments = await Http.GetFromJsonAsync<Department[]>("https://localhost:44395/api/departments");
+    }
+
+    private async Task RemoveDept()
+    {
+        foreach (var userProfile in userProfiles)
+        {
+            if (userProfile.DeptId == Id)
+            {
+                foreach (var dept in departments)
+                {
+                    if (dept.Id != Id)
+                    {
+                        userProfile.DeptId = dept.Id;
+                        await Http.PutAsJsonAsync($"https://localhost:44395/api/userprofiles", userProfile);
+                        break;
+                    }
+                    //else continue;
+                }
+            }
+        }
+        await Http.DeleteAsync($"https://localhost:44395/api/departments/{Id}");
+    }
+
+    private void Back()
+    {
+        navigationManager.NavigateTo($"https://localhost:44351/department");
+    }
+
+    private async Task DeleteAction()
+    {
+        await RemoveDept();
+        Back();
+    }
+}

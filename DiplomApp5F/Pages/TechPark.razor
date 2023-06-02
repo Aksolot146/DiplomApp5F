@@ -1,0 +1,294 @@
+﻿@page "/techpark"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@using DiplomApp5F.Models
+@using DiplomApp5F.Services
+@inject HttpClient Http
+@inject NavigationManager navigationManager
+@inject AuthService authService
+
+@if (userProfile != null && userProfile.RankId == 1)
+{
+    <h3>Парк IT-техники</h3>
+    <p>Перечень зарегистрированной IT-техники</p>
+    <p>Нажмите на заголовки столбцов таблицы для сортировки</p>
+
+    <Button Name="Добавить новую единицу IT-техники" Width="350" OnClick="Add"></Button>
+    <Button Name="Сгенерировать статистику" Width="250" OnClick="Report"></Button>
+
+    @if (requestTitles == null || requestVendors == null || requestModels == null || requestPartNumbers == null)
+    {
+        <p>Нет единиц IT-техники.</p>
+    }
+    else
+    {
+        <div>
+            <input type="radio" value="0" name="inset"
+                   checked="@(typeTable == "0")" @onchange="ChangeTypeTable" HasActive="true" />
+            <label for="Title">Полная таблица</label>
+
+            <input type="radio" value="1" name="inset"
+                   checked="@(typeTable == "1")" @onchange="ChangeTypeTable" />
+            <label for="Title">Темы</label>
+
+            <input type="radio" value="2" name="inset"
+                   checked="@(typeTable == "2")" @onchange="ChangeTypeTable" />
+            <label for="Title">Изготовители</label>
+
+            <input type="radio" value="3" name="inset"
+                   checked="@(typeTable == "3")" @onchange="ChangeTypeTable" />
+            <label for="Title">Модели</label>
+
+            <input type="radio" value="4" name="inset"
+                   checked="@(typeTable == "4")" @onchange="ChangeTypeTable" />
+            <label for="Title">Серийные номера</label>
+
+            @*<input type="radio" name="inset" @bind-value="typeTable" id="Vendor">
+                <label for="Vendor">Изготовители</label>
+
+                <input type="radio" name="inset" @bind-value="typeTable" id="Model">
+                <label for="Model">Модели</label>
+
+                <input type="radio" name="inset" @bind-value="typeTable" id="PartNumber">
+                <label for="PartNumber">Серийные номера</label>*@
+
+            @if (typeTable == "0")
+            {
+                <div id="Full">
+                    <table>
+                        <tr>
+                            <td>№</td>
+                            <td>Тема</td>
+                            <td>Фирма</td>
+                            <td>Модель</td>
+                            <td>Серийный номер</td>
+                            <td>Стоимость</td>
+                            <td>Дата регистрации</td>
+                            <td>Уд.</td>
+                        </tr>
+                        @foreach (var requestTitle in requestTitles)
+                        {
+                            @foreach (var requestVendor in requestVendors)
+                            {
+                                @foreach (var requestModel in requestModels)
+                                {
+                                    @foreach (var requestPartNumber in requestPartNumbers)
+                                    {
+                                        <tr>
+                                            @if (requestVendor.TitleId == requestTitle.Id)
+                                            {
+                                                @if (requestModel.VendorId == requestVendor.Id)
+                                                {
+                                                    @if (requestPartNumber.ModelId == requestModel.Id)
+                                                    {
+                                                        <td>@requestTitle.Id/@requestVendor.Id/@requestModel.Id/@requestPartNumber.Id</td>
+                                                        <td>@requestTitle.Titlename</td>
+                                                        <td>@requestVendor.Vendorname</td>
+                                                        <td>@requestModel.Modelname</td>
+                                                        <td>@requestPartNumber.PMname</td>
+                                                        <td>@requestPartNumber.Price</td>
+                                                        <td>@requestPartNumber.RegDate</td>
+                                                        <td><a href="@($"https://localhost:44351/techpark/delete/partnumber/{requestPartNumber.Id}")"><h2>🗑</h2></a></td>
+                                                    }
+                                                }
+                                            }
+                                        </tr>
+                                    }
+                                }
+                            }
+                        }
+                    </table>
+                </div>
+            }
+
+            @if (typeTable == "1")
+            {
+                <div id="Title">
+                    <table>
+                        <tr>
+                            <td>№ темы</td>
+                            <td>Тема</td>
+                            <td>Уд.</td>
+                            <td>Ред.</td>
+                        </tr>
+                        @foreach (var requestTitle in requestTitles)
+                        {
+                            <tr>
+                                <td>@requestTitle.Id</td>
+                                <td>@requestTitle.Titlename</td>
+                                <td><a href="@($"https://localhost:44351/techpark/delete/title/{requestTitle.Id}")"><h2>🗑</h2></a></td>
+                                <td><a href="@($"https://localhost:44351/techpark/edit/title/{requestTitle.Id}")"><h2>✎</h2></a></td>
+                            </tr>
+                        }
+                    </table>
+                </div>
+            }
+
+            @if (typeTable == "2")
+            {
+                <div id="Vendor">
+                    <table>
+                        <tr>
+                            <td>№ фирмы</td>
+                            <td>Фирма</td>
+                            <td>Уд.</td>
+                            <td>Ред.</td>
+                        </tr>
+                        @foreach (var requestVendor in requestVendors)
+                        {
+                            <tr>
+                                <td>@requestVendor.Id</td>
+                                <td>
+                                    @requestVendor.Vendorname (
+                                    @foreach (var requestTitle in requestTitles)
+                                    {
+                                        if (requestVendor.TitleId == requestTitle.Id && requestVendor.Id > 1)
+                                        {
+                                            @requestTitle.Titlename
+                                            break;
+                                        }
+                                    }
+                                    )
+                                </td>
+                                <td><a href="@($"https://localhost:44351/techpark/delete/vendor/{requestVendor.Id}")"><h2>🗑</h2></a></td>
+                                <td><a href="@($"https://localhost:44351/techpark/edit/vendor/{requestVendor.Id}")"><h2>✎</h2></a></td>
+                            </tr>
+                        }
+                    </table>
+                </div>
+            }
+
+            @if (typeTable == "3")
+            {
+                <div id="Model">
+                    <table>
+                        <tr>
+                            <td>№ модели</td>
+                            <td>Модель</td>
+                            <td>Сведения</td>
+                            <td>Уд.</td>
+                            <td>Ред.</td>
+                        </tr>
+                        @foreach (var requestModel in requestModels)
+                        {
+                            <tr>
+                                <td>@requestModel.Id</td>
+                                <td>
+                                    @requestModel.Modelname (
+                                    @foreach (var requestVendor in requestVendors)
+                                    {
+                                        if (requestVendor.Id == requestModel.VendorId && requestModel.Id > 1)
+                                        {
+                                            @requestVendor.Vendorname
+                                            break;
+                                        }
+                                    }
+                                    )
+                                </td>
+                                <td>@requestModel.Description</td>
+                                <td><a href="@($"https://localhost:44351/techpark/delete/model/{requestModel.Id}")"><h2>🗑</h2></a></td>
+                                <td><a href="@($"https://localhost:44351/techpark/edit/model/{requestModel.Id}")"><h2>✎</h2></a></td>
+                            </tr>
+                        }
+                    </table>
+                </div>
+            }
+
+            @if (typeTable == "4")
+            {
+                <div id="PartNumber">
+                    <table>
+                        <tr>
+                            <td>№ серийного номера</td>
+                            <td>Серийный номер</td>
+                            <td>Стоимость</td>
+                            <td>Дата регистрации</td>
+                            <td>Уд.</td>
+                            <td>Ред.</td>
+                        </tr>
+                        @foreach (var requestPartNumber in requestPartNumbers)
+                        {
+                            <tr>
+                                <td>@requestPartNumber.Id</td>
+                                <td>
+                                    @requestPartNumber.PMname (
+                                    @foreach (var requestModel in requestModels)
+                                    {
+                                        if (requestModel.Id == requestPartNumber.ModelId && requestPartNumber.Id > 1)
+                                        {
+                                            @foreach (var requestVendor in requestVendors)
+                                            {
+                                                if (requestVendor.Id == requestModel.VendorId && requestModel.Id > 1)
+                                                {
+                                                    @requestVendor.Vendorname
+                                                    @space
+                                                    break;
+                                                }
+                                            }
+                                            @requestModel.Modelname
+                                            break;
+                                        }
+                                    }
+                                    )
+                                </td>
+                                <td>@requestPartNumber.Price</td>
+                                <td>@requestPartNumber.RegDate</td>
+                                <td><a href="@($"https://localhost:44351/techpark/delete/partnumber/{requestPartNumber.Id}")"><h2>🗑</h2></a></td>
+                                <td><a href="@($"https://localhost:44351/techpark/edit/partnumber/{requestPartNumber.Id}")"><h2>✎</h2></a></td>
+                            </tr>
+                        }
+                    </table>
+                </div>
+            }
+        </div>
+
+    }
+}
+else
+{
+    <p>Недостаточно прав для просмотра. Обратитесь к администратору системы.</p>
+}
+
+@code {
+    private string typeTable = "0";
+    private RequestTitle[] requestTitles;
+    private RequestVendor[] requestVendors;
+    private RequestModel[] requestModels;
+    private RequestPartNumber[] requestPartNumbers;
+    private string space = " ";
+
+    private CurrentUser currentUser;
+    private UserProfile userProfile;
+
+    //сделать сортировку для этой страницы по примерам из страниц Users, Departments и Requests
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await authService.GetCurrentUserAsync();
+        userProfile = new UserProfile();
+        if (currentUser.Id > 0)
+            userProfile = await Http.GetFromJsonAsync<UserProfile>($"https://localhost:44395/api/userprofiles/{currentUser.ProfileId}");
+
+        requestTitles = await Http.GetFromJsonAsync<RequestTitle[]>("https://localhost:44395/api/requesttitles");
+        requestVendors = await Http.GetFromJsonAsync<RequestVendor[]>("https://localhost:44395/api/requestvendors");
+        requestModels = await Http.GetFromJsonAsync<RequestModel[]>("https://localhost:44395/api/requestmodels");
+        requestPartNumbers = await Http.GetFromJsonAsync<RequestPartNumber[]>("https://localhost:44395/api/requestpartnumbers");
+    }
+
+    private void Add()
+    {
+        navigationManager.NavigateTo("https://localhost:44351/techpark/add/partnumber");
+    }
+
+    private void Report()
+    {
+        navigationManager.NavigateTo("https://localhost:44351/techpark/report");
+    }
+
+    private void ChangeTypeTable(ChangeEventArgs args)
+    {
+        Console.WriteLine(args.Value);
+        typeTable = args.Value.ToString();
+    }
+}

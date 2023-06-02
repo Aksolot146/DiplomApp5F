@@ -1,0 +1,144 @@
+﻿@page "/techpark/report"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@using DiplomApp5F.Models
+@using DiplomApp5F.Services
+@inject HttpClient Http
+@inject NavigationManager navigationManager
+@inject AuthService authService
+
+@if (userProfile != null && userProfile.RankId == 1)
+{
+    <h3>Укажите дату, с которой необходимо учитывать статистику</h3>
+    <EditForm EditContext="@editContext" OnValidSubmit="@GenerateTable">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <InputDate id="Time" @bind-Value="time" />
+        <br />
+
+        <Button Type="submit" Name="Сгенерировать статистику" Width="100" />
+    </EditForm>
+}
+else
+{
+    <p>Недостаточно прав для просмотра. Обратитесь к администратору системы.</p>
+}
+
+@code {
+    private EditContext editContext;
+    private DateTime time;
+    private string timeString;
+
+    private CurrentUser currentUser;
+    private UserProfile userProfile;
+
+    private RequestStat requestStat = new RequestStat();
+    private IEnumerable<Request> requests;
+    private IEnumerable<RequestStat> requestStats;
+    private IEnumerable<RequestTitle> requestTitles;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await authService.GetCurrentUserAsync();
+        userProfile = new UserProfile();
+        if (currentUser.Id > 0)
+            userProfile = await Http.GetFromJsonAsync<UserProfile>($"https://localhost:44395/api/userprofiles/{currentUser.ProfileId}");
+
+        time = DateTime.Now;
+        editContext = new(time);
+
+        requests = await Http.GetFromJsonAsync<IEnumerable<Request>>("https://localhost:44395/api/requests");
+        requestStats = await Http.GetFromJsonAsync<IEnumerable<RequestStat>>("https://localhost:44395/api/requeststats");
+        requestTitles = await Http.GetFromJsonAsync<IEnumerable<RequestTitle>>("https://localhost:44395/api/requesttitles");
+    }
+
+    private async void GenerateTable()
+    {
+        if (requestStats.Count<RequestStat>() != 0)
+        {
+            await Http.DeleteAsync("https://localhost:44395/api/requeststats");
+        }
+
+        //все заявки
+        requestStat.ActualRequestsCount = 0;
+        requestStat.NonActualRequestsCount = 0;
+        requestStat.CompleteRequests = 0;
+        requestStat.DeclinedRequests = 0;
+        requestStat.ExpiredRequests = 0;
+        foreach (var request in requests)
+        {
+            if (request.StatusId == 1)
+            {
+                requestStat.ActualRequestsCount += 1;
+            }
+            else
+            {
+                requestStat.NonActualRequestsCount += 1;
+                if (request.StatusId == 2) requestStat.CompleteRequests += 1;
+                if (request.StatusId == 3) requestStat.DeclinedRequests += 1;
+                if (request.StatusId == 4) requestStat.ExpiredRequests += 1;
+            }
+        }
+        if (requestStat.NonActualRequestsCount == 0)
+        {
+            requestStat.CompleteRequests = 100 * requestStat.CompleteRequests / (requestStat.NonActualRequestsCount + 1);
+            requestStat.DeclinedRequests = 100 * requestStat.DeclinedRequests / (requestStat.NonActualRequestsCount + 1);
+            requestStat.ExpiredRequests = 100 * requestStat.ExpiredRequests / (requestStat.NonActualRequestsCount + 1);
+        }
+        else
+        {
+            requestStat.CompleteRequests = 100 * requestStat.CompleteRequests / (requestStat.NonActualRequestsCount);
+            requestStat.DeclinedRequests = 100 * requestStat.DeclinedRequests / (requestStat.NonActualRequestsCount);
+            requestStat.ExpiredRequests = 100 * requestStat.ExpiredRequests / (requestStat.NonActualRequestsCount);
+        }
+        await Http.PostAsJsonAsync<RequestStat>("https://localhost:44395/api/requeststats", requestStat);
+
+        //заявки по темам
+        foreach (var requestTitle in requestTitles)
+        {
+            requestStat.ActualRequestsCount = 0;
+            requestStat.NonActualRequestsCount = 0;
+            requestStat.CompleteRequests = 0;
+            requestStat.DeclinedRequests = 0;
+            requestStat.ExpiredRequests = 0;
+            if (requestTitle.Id != 1)
+            {
+                foreach (var request in requests)
+                {
+                    if (request.Title == requestTitle.Titlename)
+                    {
+                        if (request.StatusId == 1)
+                        {
+                            requestStat.ActualRequestsCount += 1;
+                        }
+                        else
+                        {
+                            requestStat.NonActualRequestsCount += 1;
+                            if (request.StatusId == 2) requestStat.CompleteRequests += 1;
+                            if (request.StatusId == 3) requestStat.DeclinedRequests += 1;
+                            if (request.StatusId == 4) requestStat.ExpiredRequests += 1;
+                        }
+                    }
+                }
+                if (requestStat.NonActualRequestsCount == 0)
+                {
+                    requestStat.CompleteRequests = 100 * requestStat.CompleteRequests / (requestStat.NonActualRequestsCount + 1);
+                    requestStat.DeclinedRequests = 100 * requestStat.DeclinedRequests / (requestStat.NonActualRequestsCount + 1);
+                    requestStat.ExpiredRequests = 100 * requestStat.ExpiredRequests / (requestStat.NonActualRequestsCount + 1);
+                }
+                else
+                {
+                    requestStat.CompleteRequests = 100 * requestStat.CompleteRequests / (requestStat.NonActualRequestsCount);
+                    requestStat.DeclinedRequests = 100 * requestStat.DeclinedRequests / (requestStat.NonActualRequestsCount);
+                    requestStat.ExpiredRequests = 100 * requestStat.ExpiredRequests / (requestStat.NonActualRequestsCount);
+                }
+                await Http.PostAsJsonAsync<RequestStat>("https://localhost:44395/api/requeststats", requestStat);
+            }
+        }
+
+        timeString = (time.Date).ToString("ddMMyyyy");
+        navigationManager.NavigateTo($"https://localhost:44351/techpark/report/table/{timeString}");
+    }
+}

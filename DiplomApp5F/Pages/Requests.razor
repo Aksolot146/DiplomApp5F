@@ -1,0 +1,255 @@
+﻿@page "/request"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@using DiplomApp5F.Models
+@using DiplomApp5F.Services
+@inject HttpClient Http
+@inject NavigationManager navigationManager
+@inject AuthService authService
+
+@if (userProfile != null && userProfile.RankId >= 1)
+{
+    <h3>Заявки</h3>
+    <p>Нажмите на заголовки столбцов таблицы для сортировки</p>
+
+    <Button Name="Добавить" Width="100" OnClick="Add"></Button>
+
+    @if (requests == null)
+    {
+        <p>Нет заявок.</p>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr>
+                    <td @onclick="SortID">№</td>
+                    <td @onclick="SortTitle">Тема</td>
+                    <td @onclick="SortVendor">Изготовитель</td>
+                    <td @onclick="SortModel">Модель</td>
+                    <td @onclick="SortPartNumber">Серийный номер</td>
+                    <td @onclick="SortDescription">Описание</td>
+                    <td @onclick="SortDeadline">Выполнить до</td>
+                    <td @onclick="SortCompleteTime">Неактуальна с</td>
+                    <td @onclick="SortRequester">От кого</td>
+                    <td @onclick="SortMechanic">Кому</td>
+                    <td @onclick="SortStatus">Статус</td>
+                </tr>
+            </thead>
+            @foreach (var request in requests)
+            {
+                <tr>
+                    @if (userProfile.RankId == 1 || (userProfile.RankId == 2 && request.ProfileId == userProfile.Id) || (userProfile.RankId == 3 && request.RequesterId == userProfile.Id))
+                    {
+                        <td>@request.Id</td>
+                        <td>@request.Title</td>
+                        <td>@request.Vendor</td>
+                        <td>@request.Model</td>
+                        <td>@request.PartNumber</td>
+                        <td>@request.Description</td>
+                        <td>@request.Deadline</td>
+                        @if (request.StatusId != 1)
+                        {
+                            <td>@request.CompleteTime</td>
+                        }
+                        else
+                        {
+                            <td>-</td>
+                        }
+                        @foreach (var userProfile in userProfiles)
+                        {
+                            @if (userProfile.Id == request.RequesterId)
+                            {
+                                <td>@userProfile.Nickname</td>
+                            }
+                        }
+                        @foreach (var userProfile in userProfiles)
+                        {
+                            @if (userProfile.Id == request.ProfileId)
+                            {
+                                <td>@userProfile.Nickname</td>
+                            }
+                        }
+                        @foreach (var requestStatus in requestStatuses)
+                        {
+                            @if (requestStatus.Id == request.StatusId)
+                            {
+                                <td>@requestStatus.Statusname</td>
+                            }
+                        }
+                        @*<td><a href="@($"https://localhost:44351/request/edit/{request.Id}")">Edit</a></td>*@
+                        <td><a href="@($"https://localhost:44351/request/delete/{request.Id}")"><h2>🗑</h2></a></td>
+                        @if (request.StatusId == 1)
+                        {
+                            <td><a href="@($"https://localhost:44351/request/decline/{request.Id}")"><h2>⮌</h2></a></td>
+                            <td><a href="@($"https://localhost:44351/request/complete/{request.Id}")"><h2>✔</h2></a></td>
+                            <td><a href="@($"https://localhost:44351/request/edit/{request.Id}")"><h2>✎</h2></a></td>
+                        }
+                    }
+                </tr>
+            }
+        </table>
+    }
+}
+else
+{
+    <p>Недостаточно прав для просмотра. Обратитесь к администратору системы.</p>
+}
+
+@code {
+    private Request[] requests;
+    private UserProfile[] userProfiles;
+    private RequestStatus[] requestStatuses;
+
+    private CurrentUser currentUser;
+    private UserProfile userProfile;
+
+    private bool sortId;
+    private bool sortTitle;
+    private bool sortVendor;
+    private bool sortModel;
+    private bool sortPartNumber;
+    private bool sortDescription;
+    private bool sortDeadline;
+    private bool sortCompleteTime;
+    private bool sortRequester;
+    private bool sortMechanic;
+    private bool sortStatus;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await authService.GetCurrentUserAsync();
+        userProfile = new UserProfile();
+        if (currentUser.Id > 0)
+            userProfile = await Http.GetFromJsonAsync<UserProfile>($"https://localhost:44395/api/userprofiles/{currentUser.ProfileId}");
+
+        requests = await Http.GetFromJsonAsync<Request[]>("https://localhost:44395/api/requests");
+        userProfiles = await Http.GetFromJsonAsync<UserProfile[]>("https://localhost:44395/api/userprofiles");
+        requestStatuses = await Http.GetFromJsonAsync<RequestStatus[]>("https://localhost:44395/api/requeststatuses");
+        foreach (var request in requests)
+        {
+            if (request.Deadline < DateTime.Now && request.StatusId == 1)
+            {
+                request.StatusId = 4;
+                request.CompleteTime = request.Deadline;
+                await Http.PutAsJsonAsync($"https://localhost:44395/api/requests", request);
+            }
+        }
+    }
+
+    private void Add()
+    {
+        navigationManager.NavigateTo("https://localhost:44351/request/add");
+    }
+
+    private void SortID()
+    {
+        if (sortId)
+            requests = requests.OrderByDescending(x => x.Id).ToArray();
+        else
+            requests = requests.OrderBy(x => x.Id).ToArray();
+
+        sortId = !sortId;
+    }
+
+    private void SortTitle()
+    {
+        if (sortTitle)
+            requests = requests.OrderByDescending(x => x.Title).ToArray();
+        else
+            requests = requests.OrderBy(x => x.Title).ToArray();
+
+        sortTitle = !sortTitle;
+    }
+
+    private void SortVendor()
+    {
+        if (sortVendor)
+            requests = requests.OrderByDescending(x => x.Vendor).ToArray();
+        else
+            requests = requests.OrderBy(x => x.Vendor).ToArray();
+
+        sortVendor = !sortVendor;
+    }
+
+    private void SortModel()
+    {
+        if (sortModel)
+            requests = requests.OrderByDescending(x => x.Model).ToArray();
+        else
+            requests = requests.OrderBy(x => x.Model).ToArray();
+
+        sortModel = !sortModel;
+    }
+
+    private void SortPartNumber()
+    {
+        if (sortPartNumber)
+            requests = requests.OrderByDescending(x => x.PartNumber).ToArray();
+        else
+            requests = requests.OrderBy(x => x.PartNumber).ToArray();
+
+        sortPartNumber = !sortPartNumber;
+    }
+
+    private void SortDescription()
+    {
+        if (sortDescription)
+            requests = requests.OrderByDescending(x => x.Description).ToArray();
+        else
+            requests = requests.OrderBy(x => x.Description).ToArray();
+
+        sortDescription = !sortDescription;
+    }
+
+    private void SortDeadline()
+    {
+        if (sortDeadline)
+            requests = requests.OrderByDescending(x => x.Deadline).ToArray();
+        else
+            requests = requests.OrderBy(x => x.Deadline).ToArray();
+
+        sortDeadline = !sortDeadline;
+    }
+
+    private void SortCompleteTime()
+    {
+        if (sortCompleteTime)
+            requests = requests.OrderByDescending(x => x.CompleteTime).ToArray();
+        else
+            requests = requests.OrderBy(x => x.CompleteTime).ToArray();
+
+        sortCompleteTime = !sortCompleteTime;
+    }
+
+    private void SortRequester()
+    {
+        if (sortRequester)
+            requests = requests.OrderByDescending(x => x.RequesterId).ToArray();
+        else
+            requests = requests.OrderBy(x => x.RequesterId).ToArray();
+
+        sortRequester = !sortRequester;
+    }
+
+    private void SortMechanic()
+    {
+        if (sortMechanic)
+            requests = requests.OrderByDescending(x => x.ProfileId).ToArray();
+        else
+            requests = requests.OrderBy(x => x.ProfileId).ToArray();
+
+        sortMechanic = !sortMechanic;
+    }
+
+    private void SortStatus()
+    {
+        if (sortStatus)
+            requests = requests.OrderByDescending(x => x.StatusId).ToArray();
+        else
+            requests = requests.OrderBy(x => x.StatusId).ToArray();
+
+        sortStatus = !sortStatus;
+    }
+}
