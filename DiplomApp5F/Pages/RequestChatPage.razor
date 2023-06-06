@@ -1,0 +1,81 @@
+﻿@page "/request/{id:int}"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@using DiplomApp5F.Models
+@using DiplomApp5F.Services
+@inject HttpClient Http
+@inject NavigationManager navigationManager
+@inject AuthService authService
+
+@if (userProfile != null && (userProfile.RankId == 1 || (userProfile.RankId == 2 && request.ProfileId == userProfile.Id) || (userProfile.RankId == 3 && request.RequesterId == userProfile.Id)))
+{
+    <h3>Чат заявки №@Id</h3>
+
+    <Button Name="Отправить сообщение" Width="200" OnClick="Add"></Button>
+
+    <table>
+        <thead>
+            <tr>
+                <td>От кого</td>
+                <td>Сообщение</td>
+                <td>Когда</td>
+            </tr>
+        </thead>
+        @foreach (var requestChat in requestChats)
+        {
+            if (requestChat.RequestId == Id)
+            {
+                <tr>
+                    @foreach (var userProfile2 in userProfiles)
+                    {
+                        if (userProfile2.Id == requestChat.ProfileId)
+                        {
+                            <td>@userProfile2.Nickname</td>
+                        }
+                    }
+                    <td>@requestChat.Message</td>
+                    <td>@requestChat.PubTime</td>
+                    <td><a href="@($"https://localhost:44351/request/deletemessage/{requestChat.Id}")"><h2>🗑</h2></a></td>
+                </tr>
+            }
+        }
+    </table>
+}
+else
+{
+    <p>Недостаточно прав для просмотра. Обратитесь к администратору системы.</p>
+}
+
+@code
+{
+    [Parameter]
+    public int Id { get; set; }
+
+    private IEnumerable<RequestChat> requestChats;
+    private Request request;
+    private IEnumerable<UserProfile> userProfiles;
+
+    private CurrentUser currentUser;
+    private UserProfile userProfile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await authService.GetCurrentUserAsync();
+        userProfile = new UserProfile();
+        if (currentUser.Id > 0)
+            userProfile = await Http.GetFromJsonAsync<UserProfile>($"https://localhost:44395/api/userprofiles/{currentUser.ProfileId}");
+
+        request = new Request();
+        request = await Http.GetFromJsonAsync<Request>($"https://localhost:44395/api/requests/{Id}");
+        requestChats = await Http.GetFromJsonAsync<IEnumerable<RequestChat>>("https://localhost:44395/api/requestchat");
+        userProfiles = await Http.GetFromJsonAsync<IEnumerable<UserProfile>>("https://localhost:44395/api/userprofiles");
+
+        requestChats = requestChats.OrderByDescending(x => x.PubTime).ToArray();
+    }
+
+    private void Add()
+    {
+        navigationManager.NavigateTo($"https://localhost:44351/request/send/{Id}");
+    }
+}

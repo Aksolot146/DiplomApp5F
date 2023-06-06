@@ -40,5 +40,8 @@ namespace DiplomApp5F.Models
 
         [JsonIgnore]
         public virtual RequestStatus RequestStatus { get; set; }
+
+        [JsonIgnore]
+        public virtual ICollection<RequestChat> RequestChat { get; set; } = new HashSet<RequestChat>();
     }
 }

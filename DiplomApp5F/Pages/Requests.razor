@@ -12,6 +12,7 @@
 {
     <h3>Заявки</h3>
     <p>Нажмите на заголовки столбцов таблицы для сортировки</p>
+    <p>Нажмите на номер в первом столбце таблицы для перехода к чату заявки</p>
 
     <Button Name="Добавить" Width="100" OnClick="Add"></Button>
 
@@ -39,55 +40,56 @@
             </thead>
             @foreach (var request in requests)
             {
-                <tr>
-                    @if (userProfile.RankId == 1 || (userProfile.RankId == 2 && request.ProfileId == userProfile.Id) || (userProfile.RankId == 3 && request.RequesterId == userProfile.Id))
+        <tr>
+            @if (userProfile.RankId == 1 || (userProfile.RankId == 2 && request.ProfileId == userProfile.Id) || (userProfile.RankId == 3 && request.RequesterId == userProfile.Id))
+            {
+                <td><a href="@($"https://localhost:44351/request/{request.Id}")">@request.Id</a></td>
+                <td>@request.Title</td>
+                <td>@request.Vendor</td>
+                <td>@request.Model</td>
+                <td>@request.PartNumber</td>
+                <td>@request.Description</td>
+                <td>@request.Deadline</td>
+                @if (request.StatusId != 1)
+                {
+                    <td>@request.CompleteTime</td>
+                }
+                else
+                {
+                    <td>-</td>
+                }
+                @foreach (var userProfile in userProfiles)
+                {
+                    @if (userProfile.Id == request.RequesterId)
                     {
-                        <td>@request.Id</td>
-                        <td>@request.Title</td>
-                        <td>@request.Vendor</td>
-                        <td>@request.Model</td>
-                        <td>@request.PartNumber</td>
-                        <td>@request.Description</td>
-                        <td>@request.Deadline</td>
-                        @if (request.StatusId != 1)
-                        {
-                            <td>@request.CompleteTime</td>
-                        }
-                        else
-                        {
-                            <td>-</td>
-                        }
-                        @foreach (var userProfile in userProfiles)
-                        {
-                            @if (userProfile.Id == request.RequesterId)
-                            {
-                                <td>@userProfile.Nickname</td>
-                            }
-                        }
-                        @foreach (var userProfile in userProfiles)
-                        {
-                            @if (userProfile.Id == request.ProfileId)
-                            {
-                                <td>@userProfile.Nickname</td>
-                            }
-                        }
-                        @foreach (var requestStatus in requestStatuses)
-                        {
-                            @if (requestStatus.Id == request.StatusId)
-                            {
-                                <td>@requestStatus.Statusname</td>
-                            }
-                        }
-                        @*<td><a href="@($"https://localhost:44351/request/edit/{request.Id}")">Edit</a></td>*@
-                        <td><a href="@($"https://localhost:44351/request/delete/{request.Id}")"><h2>🗑</h2></a></td>
-                        @if (request.StatusId == 1)
-                        {
-                            <td><a href="@($"https://localhost:44351/request/decline/{request.Id}")"><h2>⮌</h2></a></td>
-                            <td><a href="@($"https://localhost:44351/request/complete/{request.Id}")"><h2>✔</h2></a></td>
-                            <td><a href="@($"https://localhost:44351/request/edit/{request.Id}")"><h2>✎</h2></a></td>
-                        }
+                        <td>@userProfile.Nickname</td>
                     }
-                </tr>
+                }
+                @foreach (var userProfile in userProfiles)
+                {
+                    @if (userProfile.Id == request.ProfileId)
+                    {
+                        <td>@userProfile.Nickname</td>
+                    }
+                }
+                @foreach (var requestStatus in requestStatuses)
+                {
+                    @if (requestStatus.Id == request.StatusId)
+                    {
+                        <td>@requestStatus.Statusname</td>
+                    }
+                }
+                @*<td><a href="@($"https://localhost:44351/request/edit/{request.Id}")">Edit</a></td>*@
+                <td><a href="@($"https://localhost:44351/request/delete/{request.Id}")"><h2>🗑</h2></a></td>
+                <td><a href="@($"https://localhost:44351/request/postpone/{request.Id}")"><h2>⧖</h2></a></td>
+                @if (request.StatusId == 1)
+                {
+                    <td><a href="@($"https://localhost:44351/request/decline/{request.Id}")"><h2>⮌</h2></a></td>
+                    <td><a href="@($"https://localhost:44351/request/complete/{request.Id}")"><h2>✔</h2></a></td>
+                    <td><a href="@($"https://localhost:44351/request/edit/{request.Id}")"><h2>✎</h2></a></td>
+                }
+            }
+        </tr>
             }
         </table>
     }

@@ -26,6 +26,7 @@ else
 
     private Request[] requests;
     private UserProfile[] userProfiles;
+    private IEnumerable<RequestChat> requestChats;
 
     private CurrentUser currentUser;
     private UserProfile userProfile;
@@ -39,15 +40,26 @@ else
 
         requests = await Http.GetFromJsonAsync<Request[]>("https://localhost:44395/api/requests");
         userProfiles = await Http.GetFromJsonAsync<UserProfile[]>("https://localhost:44395/api/userprofiles");
+        requestChats = await Http.GetFromJsonAsync<IEnumerable<RequestChat>>("https://localhost:44395/api/requestchat");
     }
 
     private async Task RemoveUser()
     {
+        foreach (var request in requests)
+        {
+            foreach (var requestChat in requestChats)
+            {
+                if (requestChat.RequestId == request.Id && (request.ProfileId == Id || request.RequesterId == Id))
+                {
+                    await Http.DeleteAsync($"https://localhost:44395/api/requestchat/{requestChat.Id}");
+                }
+            }
+        }
         foreach (var userProfile in userProfiles)
         {
             foreach (var request in requests)
             {
-                if (request.ProfileId == userProfile.Id && userProfile.UserId == Id)
+                if ((request.ProfileId == userProfile.Id || request.RequesterId == userProfile.Id) && userProfile.UserId == Id)
                 {
                     await Http.DeleteAsync($"https://localhost:44395/api/requests/{request.Id}");
                 }

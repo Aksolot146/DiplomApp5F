@@ -8,7 +8,7 @@
 @inject NavigationManager navigationManager
 @inject AuthService authService
 
-@if (userProfile != null && (userProfile.RankId == 1 || userProfile.RankId == 3))
+@if (userProfile != null && (userProfile.RankId == 1 || (userProfile.RankId == 3 && editRequest.RequesterId == userProfile.Id)))
 {
     <h3>Редактировать заявку №@editRequest.Id</h3>
     <br />
